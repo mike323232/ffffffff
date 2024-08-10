@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Εφαρμογή Σύγκρισης Φαρμάκων OTC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result, #allDrugsResult {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .menu-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+        .menu-buttons button {
+            width: 48%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Εφαρμογή Σύγκρισης Φαρμάκων OTC</h1>
+        <div id="loginForm">
+            <h2>Σύνδεση</h2>
+            <input type="text" id="username" placeholder="Όνομα χρήστη">
+            <input type="password" id="password" placeholder="Κωδικός">
+            <button onclick="login()">Σύνδεση</button>
+            <button onclick="showRegisterForm()">Εγγραφή</button>
+        </div>
+        <div id="registerForm" style="display: none;">
+            <h2>Εγγραφή</h2>
+            <input type="text" id="newUsername" placeholder="Νέο όνομα χρήστη">
+            <input type="password" id="newPassword" placeholder="Νέος κωδικός">
+            <input type="text" id="country" placeholder="Χώρα">
+            <button onclick="register()">Εγγραφή</button>
+        </div>
+        <div id="userMenu" style="display: none;">
+            <h2>Μενού Χρήστη</h2>
+            <div class="menu-buttons">
+                <button onclick="showSearchForm()">Αναζήτηση και Σύγκριση Φαρμάκων</button>
+                <button onclick="viewAllDrugs()">Προβολή Όλων των Φαρμάκων</button>
+            </div>
+            <button onclick="logout()">Αποσύνδεση</button>
+        </div>
+        <div id="searchForm" style="display: none;">
+            <h2>Αναζήτηση και Σύγκριση Φαρμάκων</h2>
+            <select id="sourceCountry">
+                <option value="">Επιλέξτε χώρα προέλευσης</option>
+                <option value="Greece">Ελλάδα</option>
+                <option value="France">Γαλλία</option>
+                <option value="Spain">Ισπανία</option>
+                <option value="Italy">Ιταλία</option>
+                <option value="Germany">Γερμανία</option>
+                <option value="UK">Ηνωμένο Βασίλειο</option>
+            </select>
+            <input type="text" id="drugName" placeholder="Όνομα φαρμάκου, δραστική ουσία ή ID">
+            <select id="destCountry">
+                <option value="">Επιλέξτε χώρα προορισμού</option>
+                <option value="Greece">Ελλάδα</option>
+                <option value="France">Γαλλία</option>
+                <option value="Spain">Ισπανία</option>
+                <option value="Italy">Ιταλία</option>
+                <option value="Germany">Γερμανία</option>
+                <option value="UK">Ηνωμένο Βασίλειο</option>
+            </select>
+            <button onclick="searchDrug()">Αναζήτηση</button>
+        </div>
+        <div id="result"></div>
+        <div id="allDrugsResult"></div>
+    </div>
+
+    <script>
+        const drugDatabase = {
+            Greece: {
+                para_500_gr: { id: "para_500_gr", name: "Depon", activeIngredient: "paracetamol", dosage: "500mg", form: "tablet", price: 2.5, manufacturer: "Bristol-Myers Squibb", aliases: ["Παρακεταμόλη", "Ντεπόν"] },
+                ibu_400_gr: { id: "ibu_400_gr", name: "Nurofen", activeIngredient: "ibuprofen", dosage: "400mg", form: "tablet", price: 3.0, manufacturer: "Reckitt Benckiser", aliases: ["Ιβουπροφαίνη"] },
+                asp_100_gr: { id: "asp_100_gr", name: "Salospir", activeIngredient: "acetylsalicylic acid", dosage: "100mg", form: "tablet", price: 2.0, manufacturer: "Uni-Pharma", aliases: ["Ασπιρίνη"] }
+            },
+            France: {
+                para_500_fr: { id: "para_500_fr", name: "Doliprane", activeIngredient: "paracetamol", dosage: "500mg", form: "tablet", price: 2.8, manufacturer: "Sanofi", aliases: ["Paracétamol"] },
+                ibu_400_fr: { id: "ibu_400_fr", name: "Advil", activeIngredient: "ibuprofen", dosage: "400mg", form: "tablet", price: 3.2, manufacturer: "Pfizer", aliases: ["Ibuprofène"] },
+                asp_100_fr: { id: "asp_100_fr", name: "Aspegic", activeIngredient: "acetylsalicylic acid", dosage: "100mg", form: "sachet", price: 2.2, manufacturer: "Sanofi", aliases: ["Aspirine"] }
+            },
+            Germany: {
+                para_500_de: { id: "para_500_de", name: "Paracetamol Ratiopharm", activeIngredient: "paracetamol", dosage: "500mg", form: "tablet", price: 2.4, manufacturer: "Ratiopharm", aliases: ["Paracetamol"] },
+                ibu_400_de: { id: "ibu_400_de", name: "Ibuprofen AL", activeIngredient: "ibuprofen", dosage: "400mg", form: "tablet", price: 3.1, manufacturer: "ALIUD Pharma", aliases: ["Ibuprofen"] },
+                asp_100_de: { id: "asp_100_de", name: "ASS-ratiopharm", activeIngredient: "acetylsalicylic acid", dosage: "100mg", form: "tablet", price: 2.1, manufacturer: "Ratiopharm", aliases: ["Acetylsalicylsäure"] }
+            }
+        };
+
+        const users = {
+            "sample_user": { username: "sample_user", password: "password123", country: "Greece" }
+        };
+
+        let currentUser = null;
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (users[username] && users[username].password === password) {
+                currentUser = users[username];
+                showUserMenu();
+            } else {
+                alert("Λάθος στοιχεία σύνδεσης.");
+            }
+        }
+
+        function register() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const country = document.getElementById('country').value;
+            if (users[username]) {
+                alert("Το όνομα χρήστη υπάρχει ήδη.");
+            } else {
+                users[username] = { username, password, country };
+                currentUser = users[username];
+                showUserMenu();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            showLoginForm();
+        }
+
+        function showLoginForm() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('userMenu').style.display = 'none';
+            document.getElementById('searchForm').style.display = 'none';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('allDrugsResult').innerHTML = '';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+
+        function showUserMenu() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('userMenu').style.display = 'block';
+            document.getElementById('searchForm').style.display = 'none';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('allDrugsResult').innerHTML = '';
+        }
+
+        function showSearchForm() {
+            document.getElementById('searchForm').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('allDrugsResult').innerHTML = '';
+        }
+
+        function searchDrug() {
+            const sourceCountry = document.getElementById('sourceCountry').value;
+            const drugName = document.getElementById('drugName').value.toLowerCase();
+            const destCountry = document.getElementById('destCountry').value;
+            const resultDiv = document.getElementById('result');
+
+            let sourceDrug = null;
+            for (const drugId in drugDatabase[sourceCountry]) {
+                const drug = drugDatabase[sourceCountry][drugId];
+                if (drug.name.toLowerCase() === drugName || drug.activeIngredient.toLowerCase() === drugName || drug.id.toLowerCase() === drugName || drug.aliases.some(alias => alias.toLowerCase() === drugName)) {
+                    sourceDrug = drug;
+                    break;
+                }
+            }
+
+            if (!sourceDrug) {
+                resultDiv.innerHTML = `<p>Το φάρμακο "${drugName}" δεν βρέθηκε στη ${sourceCountry}.</p>`;
+                return;
+            }
+
+            let equivalentDrugs = [];
+            for (const drugId in drugDatabase[destCountry]) {
+                const drug = drugDatabase[destCountry][drugId];
+                if (drug.activeIngredient.toLowerCase() === sourceDrug.activeIngredient.toLowerCase()) {
+                    equivalentDrugs.push(drug);
+                }
+            }
+
+            let resultHTML = `
+                <h2>Αποτελέσματα Αναζήτησης</h2>
+                <h3>Φάρμακο στη ${sourceCountry}:</h3>
+                <p>Όνομα: ${sourceDrug.name}</p>
+                <p>Δραστική Ουσία: ${sourceDrug.activeIngredient}</p>
+                <p>Δοσολογία: ${sourceDrug.dosage}</p>
+                <p>Μορφή: ${sourceDrug.form}</p>
+                <p>Τιμή: €${sourceDrug.price.toFixed(2)}</p>
+                <p>Κατασκευαστής: ${sourceDrug.manufacturer}</p>
+                <p>Γνωστό και ως: ${sourceDrug.aliases.join(', ')}</p>
+            `;
+
+            if (equivalentDrugs.length > 0) {
+                resultHTML += `<h3>Αντίστοιχα φάρμακα στη ${destCountry}:</h3>`;
+                equivalentDrugs.forEach(drug => {
+                    resultHTML += `
+                        <p>Όνομα: ${drug.name}</p>
+                        <p>Δραστική Ουσία: ${drug.activeIngredient}</p>
+                        <p>Δοσολογία: ${drug.dosage}</p>
+                        <p>Μορφή: ${drug.form}</p>
+                        <p>Τιμή: €${drug.price.toFixed(2)}</p>
+                        <p>Κατασκευαστής: ${drug.manufacturer}</p>
+                        <p>Γνωστό και ως: ${drug.aliases.join(', ')}</p>
+                        <hr>
+                    `;
+                });
+            } else {
+                resultHTML += `<p>Δεν βρέθηκαν αντίστοιχα φάρμακα στη ${destCountry}.</p>`;
+            }
+
+            resultDiv.innerHTML = resultHTML;
+        }
+
+        function viewAllDrugs() {
+            const allDrugsResultDiv = document.getElementById('allDrugsResult');
+            let resultHTML = '<h2>Όλα τα Φάρμακα</h2>';
+
+            for (const country in drugDatabase) {
+                resultHTML += `<h3>${country}</h3>`;
+                for (const drugId in drugDatabase[country]) {
+                    const drug = drugDatabase[country][drugId];
+                    resultHTML += `
+                        <p>Όνομα: ${drug.name}</p>
+                        <p>Δραστική Ουσία: ${drug.activeIngredient}</p>
+                        <p>Δοσολογία: ${drug.dosage}</p>
+                        <p>Μορφή: ${drug.form}</p>
+                        <p>Τιμή: €${drug.price.toFixed(2)}</p>
+                        <p>Κατασκευαστής: ${drug.manufacturer}</p>
+                        <hr>
+                    `;
+                }
+            }
+
+            allDrugsResultDiv.innerHTML = resultHTML;
+        }
+
+        // Αρχική εμφάνιση της φόρμας σύνδεσης
+        showLoginForm();
+    </script>
+</body>
+</html>
